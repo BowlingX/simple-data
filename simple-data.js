@@ -6,12 +6,35 @@
 
 SD = {};
 
-
 /**
- * A Basic model
+ * A Mixin for serialization
+ * @link http://byronsalau.com/blog/convert-ember-objects-to-json/
  * @type {*}
  */
-SD.Model = Ember.Object.extend({
+SD.Serializable = Ember.Mixin.create({
+    serialize: function () {
+        var result = {};
+        for (var key in $.extend(true, {}, this)) {
+            // Skip these
+            if (key === 'isInstance' ||
+                key === 'isDestroyed' ||
+                key === 'isDestroying' ||
+                key === 'concatenatedProperties' ||
+                typeof this[key] === 'function') {
+                continue;
+            }
+            result[key] = this[key];
+
+        }
+        return result;
+    }
+});
+
+/**
+ * A Basic model that provides basic Caching algorithms
+ * @type {*}
+ */
+SD.Model = Ember.Object.extend(SD.Serializable, {
 
     /**
      * Reloads a record
@@ -20,15 +43,15 @@ SD.Model = Ember.Object.extend({
     reload: function () {
         var $this = this;
         var data = this.constructor.reload(this);
-        return data.then(function(r){
+        return data.then(function (r) {
             $this.replace(r);
             return $this;
         });
     },
 
-    replace:function(data) {
-      var newModel = this.constructor.applyMapping(data);
-      this.setProperties(newModel);
+    replace: function (data) {
+        var newModel = this.constructor.applyMapping(data);
+        this.setProperties(newModel);
     },
 
     /**
@@ -45,7 +68,8 @@ SD.Model = Ember.Object.extend({
 
     },
 
-    afterRemove: function () { }
+    afterRemove: function () {
+    }
 
 });
 /**
@@ -78,9 +102,9 @@ SD.ModelArrayHolderMixin = Ember.Mixin.create({
  * @type {*}
  */
 SD.ModelArrayHolder = Ember.ArrayProxy.extend({
-    _parent:null,
-    _path:null,
-    appendRecord: function (thisRecord) {
+    _parent: null,
+    _path: null,
+    add: function (thisRecord) {
         var $this = this;
         var addedRecord = thisRecord.constructor.add(thisRecord);
         return addedRecord.then(function (r) {
@@ -91,10 +115,39 @@ SD.ModelArrayHolder = Ember.ArrayProxy.extend({
     }
 });
 
+
+SD.AdapterOperationsMixin = Ember.Mixin.create({
+
+    /**
+     * This creates a new Record
+     * @param newRecord
+     */
+    add: function (newRecord) {},
+
+    /**
+     * Called when record.reload() ist called
+     * @param oldRecord
+     */
+    reload: function (oldRecord) {},
+
+    /**
+     * Called when record.remove() is called
+     * @param record
+     */
+    remove: function (record) {},
+
+    /**
+     * Called when Model.find(id) is called and record was not found in cache
+     * Any number of arguments is allowed
+     * @param id
+     */
+    findRecord:function(id){}
+});
+
 /**
  * Static Methods for model
  */
-SD.Model.reopenClass({
+SD.Model.reopenClass(SD.AdapterOperationsMixin,{
 
     _cache: [],
     _mapping: {},
@@ -194,7 +247,7 @@ SD.Model.reopenClass({
         }
 
         var value = current instanceof Array ? SD.ModelArrayHolder.create(
-            {_parent:obj, _path:path, content: current.map(function (item) {
+            {_parent: obj, _path: path, content: current.map(function (item) {
                 return model.applyMappingForArray(item, obj, path);
             })}) : model.applyMapping(current);
 
@@ -232,11 +285,16 @@ SD.Model.reopenClass({
         if (object) {
             return def.resolve(this.applyMapping(object)).promise();
         } else {
-            return $.get()
+            return this.findRecord.apply(this, arguments);
         }
     },
-
-    add: function (o) {},
-    reload:function(oldRecord){}
+    /**
+     * Invalidates cache
+     */
+    invalidateCache:function(){
+        this._cache = [];
+    }
 
 });
+
+
