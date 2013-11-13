@@ -2,6 +2,8 @@
  * Simple data layer for ember
  * Copyright (c) 2013 David Heidrich
  * @author David Heidrich (me@bowlingx.com)
+ * Licensed under MIT License
+ * @license https://raw.github.com/BowlingX/simple-data/master/LICENSE
  */
 
 SD = {};
@@ -138,7 +140,6 @@ SD.AdapterOperationsMixin = Ember.Mixin.create({
 
     /**
      * Called when Model.find(id) is called and record was not found in cache
-     * Any number of arguments is allowed
      * @param id
      */
     findRecord:function(id){}
@@ -170,7 +171,10 @@ SD.Model.reopenClass(SD.AdapterOperationsMixin,{
     },
 
     map: function (key, type) {
-        this._mapping[key] = type;
+        if(!this._mapping[this]) {
+            this._mapping[this] = {}
+        }
+        this._mapping[this][key] = type;
         return this;
     },
     /**
@@ -180,7 +184,7 @@ SD.Model.reopenClass(SD.AdapterOperationsMixin,{
      */
     applyMapping: function (object) {
         // Create a Model of root Object (found Model)
-        var appliedModel = this.create(object);
+        var appliedModel =  (object instanceof this)? object : this.create(object);
         // Now Apply mapping defined on this model to describe more models on this path
         // Valid mappings:
         // App.Model.map("object.path", App.MyModel)
@@ -195,8 +199,8 @@ SD.Model.reopenClass(SD.AdapterOperationsMixin,{
      */
     _applyMapping: function (appliedModel) {
         var $this = this;
-        for (var prop in this._mapping) {
-            var model = this._mapping[prop];
+        for (var prop in this._mapping[this]) {
+            var model = this._mapping[this][prop];
             $this._deepFindAndApply(appliedModel, prop, model)
         }
         return appliedModel;
@@ -285,7 +289,10 @@ SD.Model.reopenClass(SD.AdapterOperationsMixin,{
         if (object) {
             return def.resolve(this.applyMapping(object)).promise();
         } else {
-            return this.findRecord.apply(this, arguments);
+            var $this = this;
+            return this.findRecord.apply(this, arguments).then(function(result){
+                return $this.applyMapping(result);
+            });
         }
     },
     /**
