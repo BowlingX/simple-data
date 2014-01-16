@@ -170,7 +170,10 @@ SD.Model.reopenClass(SD.AdapterOperationsMixin,{
     },
 
     map: function (key, type) {
-        this._mapping[key] = type;
+        if(!this._mapping[this]) {
+            this._mapping[this] = {}
+        }
+        this._mapping[this][key] = type;
         return this;
     },
     /**
@@ -180,12 +183,16 @@ SD.Model.reopenClass(SD.AdapterOperationsMixin,{
      */
     applyMapping: function (object) {
         // Create a Model of root Object (found Model)
-        var appliedModel = this.create(object);
+        var appliedModel =  (object instanceof this)? object : this.create(object);
         // Now Apply mapping defined on this model to describe more models on this path
         // Valid mappings:
         // App.Model.map("object.path", App.MyModel)
+        var $this = this;
+        return object instanceof Array ? SD.ModelArrayHolder.create(
+            {_parent: appliedModel, _path: "this", content: object.map(function (item) {
+                return $this.applyMappingForArray(item, appliedModel, "this");
+            })}) : this._applyMapping(appliedModel);
 
-        return this._applyMapping(appliedModel);
     },
     /**
      * Applys mapping to Model
@@ -195,8 +202,8 @@ SD.Model.reopenClass(SD.AdapterOperationsMixin,{
      */
     _applyMapping: function (appliedModel) {
         var $this = this;
-        for (var prop in this._mapping) {
-            var model = this._mapping[prop];
+        for (var prop in this._mapping[this]) {
+            var model = this._mapping[this][prop];
             $this._deepFindAndApply(appliedModel, prop, model)
         }
         return appliedModel;
@@ -245,7 +252,6 @@ SD.Model.reopenClass(SD.AdapterOperationsMixin,{
         if (!current) {
             return;
         }
-
         var value = current instanceof Array ? SD.ModelArrayHolder.create(
             {_parent: obj, _path: path, content: current.map(function (item) {
                 return model.applyMappingForArray(item, obj, path);
@@ -285,7 +291,10 @@ SD.Model.reopenClass(SD.AdapterOperationsMixin,{
         if (object) {
             return def.resolve(this.applyMapping(object)).promise();
         } else {
-            return this.findRecord.apply(this, arguments);
+            var $this = this;
+            return this.findRecord.apply(this, arguments).then(function(result){
+                return $this.applyMapping(result);
+            });
         }
     },
     /**
