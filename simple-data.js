@@ -2,6 +2,8 @@
  * Simple data layer for ember
  * Copyright (c) 2013 David Heidrich
  * @author David Heidrich (me@bowlingx.com)
+ * Licensed under MIT License
+ * @license https://raw.github.com/BowlingX/simple-data/master/LICENSE
  */
 
 SD = {};
@@ -138,7 +140,6 @@ SD.AdapterOperationsMixin = Ember.Mixin.create({
 
     /**
      * Called when Model.find(id) is called and record was not found in cache
-     * Any number of arguments is allowed
      * @param id
      */
     findRecord:function(id){}
