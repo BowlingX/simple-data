@@ -1,0 +1,21 @@
+{
+    "name": "ember-simple-data",
+    "version": "0.0.1",
+    "main": "dist/simple-data.js",
+    "ignore": [
+        "source",
+        "spec",
+        ".bowerrc",
+        ".gitignore",
+        ".jshintignore",
+        ".jshintrc",
+        "bower.json",
+        "gruntfile.js",
+        "package.json",
+        "README.md"
+    ],
+    "dependencies": {
+        "jquery": ">=1.10.2",
+        "ember": ">=1.0.0"
+    }
+}
