@@ -296,10 +296,12 @@
             if (!current) {
                 return;
             }
-            var value = current instanceof Array ? SD.ModelArrayHolder.create(
-                {_parent: obj, _path: path, content: current.map(function (item) {
-                    return model.applyMappingForArray(item, obj, path);
-                })}) : model.applyMapping(current);
+            if (typeof current === 'object') {
+                var value = current instanceof Array ? SD.ModelArrayHolder.create(
+                    {_parent: obj, _path: path, content: current.map(function (item) {
+                        return model.applyMappingForArray(item, obj, path);
+                    })}) : model.applyMapping(current);
+            }
 
             this._setObjectPathToValue(obj, value, path);
 
